@@ -21,6 +21,8 @@ contract Token is IERC20, IMintableToken, IDividends {
 
   //state variables 
   mapping (address => mapping (address => uint256)) private _allowances;
+  mapping (address => uint256) private holderIndex; //1-based index, 0 means not in list
+  address[] private holders;
 
 
   // IERC20
@@ -55,6 +57,9 @@ contract Token is IERC20, IMintableToken, IDividends {
 
     balanceOf[msg.sender] = balanceOf[msg.sender].add(msg.value);
     totalSupply = totalSupply.add(msg.value);
+    
+    //update holder list
+    _updateHolderList(msg.sender);
   }
 
   function burn(address payable dest) external override {
@@ -64,18 +69,22 @@ contract Token is IERC20, IMintableToken, IDividends {
     balanceOf[msg.sender] = 0;
     totalSupply = totalSupply.sub(amount);
 
-    // Transfer ETH to destination
+    //update holder list
+    _updateHolderList(msg.sender);
+
+    //transfer ETH to destination
     dest.transfer(amount);
   }
 
   // IDividends
 
   function getNumTokenHolders() external view override returns (uint256) {
-    revert();
+    return holders.length;
   }
 
   function getTokenHolder(uint256 index) external view override returns (address) {
-    revert();
+    require(index > 0 && index <= holders.length, "Index out of bounds");
+    return holders[index - 1];
   }
 
   function recordDividend() external payable override {
@@ -96,6 +105,35 @@ contract Token is IERC20, IMintableToken, IDividends {
     balanceOf[from] = balanceOf[from].sub(value);
     balanceOf[to] = balanceOf[to].add(value);
 
+    //update holder list
+    _updateHolderList(from);
+    _updateHolderList(to);
+
     return true;
+  }
+
+  function _updateHolderList(address account) internal {
+    uint256 currentIndex = holderIndex[account];
+
+    if (balanceOf[account] == 0) {
+      // Remove from holder list if balance is zero
+      if (currentIndex > 0) {
+        // Move last element to the position of element to delete
+        uint256 lastIndex = holders.length;
+        if (currentIndex != lastIndex) {
+          address lastHolder = holders[lastIndex - 1];
+          holders[currentIndex - 1] = lastHolder;
+          holderIndex[lastHolder] = currentIndex;
+        }
+        holders.pop();
+        holderIndex[account] = 0;
+      }
+    } else {
+      // Add to holder list if not already there
+      if (currentIndex == 0) {
+        holders.push(account);
+        holderIndex[account] = holders.length;
+      }
+    }
   }
 }
