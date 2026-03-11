@@ -19,10 +19,15 @@ contract Token is IERC20, IMintableToken, IDividends {
   // ----- END: DO NOT EDIT THIS SECTION ------ //  
   // ------------------------------------------ //
 
+  //state variables 
+  mapping (address => mapping (address => uint256)) private _allowances;
+
+
   // IERC20
 
   function allowance(address owner, address spender) external view override returns (uint256) {
-    revert();
+    //return from list of known allowances
+    return _allowances[owner][spender];
   }
 
   function transfer(address to, uint256 value) external override returns (bool) {
@@ -30,7 +35,9 @@ contract Token is IERC20, IMintableToken, IDividends {
   }
 
   function approve(address spender, uint256 value) external override returns (bool) {
-    revert();
+    //approve by adding to list of known allowances
+    _allowances[msg.sender][spender] = value;
+    return true;
   }
 
   function transferFrom(address from, address to, uint256 value) external override returns (bool) {
