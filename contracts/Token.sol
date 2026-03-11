@@ -44,16 +44,34 @@ contract Token is IERC20, IMintableToken, IDividends {
 
   // IERC20
 
+  /**
+   * @notice Returns the remaining number of tokens that spender is allowed to spend on behalf of owner
+   * @param owner The address that owns the tokens
+   * @param spender The address that is authorized to spend the tokens
+   * @return The amount of tokens the spender is still allowed to spend
+   */
   function allowance(address owner, address spender) external view override returns (uint256) {
     //return from list of known allowances
     return _allowances[owner][spender];
   }
 
+  /**
+   * @notice Transfers tokens from the caller's address to another address
+   * @param to The address to transfer tokens to
+   * @param value The amount of tokens to transfer
+   * @return success True if the transfer was successful
+   */
   function transfer(address to, uint256 value) external override returns (bool) {
     //call private transfer function
     return _transfer(msg.sender, to, value);
   }
 
+  /**
+   * @notice Approves a spender to spend a specific amount of tokens on behalf of the caller
+   * @param spender The address authorized to spend the tokens
+   * @param value The maximum amount of tokens the spender can spend
+   * @return success True if the approval was successful
+   */
   function approve(address spender, uint256 value) external override returns (bool) {
     //approve by adding to list of known allowances
     _allowances[msg.sender][spender] = value;
@@ -61,6 +79,13 @@ contract Token is IERC20, IMintableToken, IDividends {
     return true;
   }
 
+  /**
+   * @notice Transfers tokens from one address to another using an allowance
+   * @param from The address to transfer tokens from
+   * @param to The address to transfer tokens to
+   * @param value The amount of tokens to transfer
+   * @return success True if the transfer was successful
+   */
   function transferFrom(address from, address to, uint256 value) external override returns (bool) {
     require(_allowances[from][msg.sender] >= value, "Insufficient allowance");
     _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(value);
@@ -69,10 +94,18 @@ contract Token is IERC20, IMintableToken, IDividends {
 
   // IMintableToken
 
+  /**
+   * @notice Mints new tokens by sending ETH to the contract
+   * @dev The amount of tokens minted equals the amount of ETH sent (1:1 ratio)
+   */
   function mint() external payable override {
     _mint(msg.sender, msg.value);
   }
 
+  /**
+   * @notice Burns all of the caller's tokens and sends the equivalent ETH to a destination address
+   * @param dest The address to receive the ETH from burned tokens
+   */
   function burn(address payable dest) external override {
     uint256 amount = balanceOf[msg.sender];
     require(amount > 0, "No tokens to burn");
@@ -90,21 +123,38 @@ contract Token is IERC20, IMintableToken, IDividends {
     emit Transfer(msg.sender, address(0), amount);
   }
 
+  /**
+   * @notice Fallback function to mint tokens when ETH is sent directly to the contract
+   * @dev Automatically mints tokens equal to the amount of ETH sent (1:1 ratio)
+   */
   receive() external payable {
     _mint(msg.sender, msg.value);
   }
 
   // IDividends
 
+  /**
+   * @notice Returns the total number of token holders
+   * @return The count of addresses that currently hold tokens
+   */
   function getNumTokenHolders() external view override returns (uint256) {
     return holders.length;
   }
 
+  /**
+   * @notice Returns the address of a token holder at a specific index
+   * @param index The 1-based index of the holder in the list
+   * @return The address of the token holder
+   */
   function getTokenHolder(uint256 index) external view override returns (address) {
     require(index > 0 && index <= holders.length, "Index out of bounds");
     return holders[index - 1];
   }
 
+  /**
+   * @notice Records a dividend distribution proportionally to all token holders
+   * @dev Distributes the sent ETH to holders based on their token balance relative to total supply
+   */
   function recordDividend() external payable override {
     require(msg.value > 0, "Must send ETH as dividend");
 
@@ -117,10 +167,19 @@ contract Token is IERC20, IMintableToken, IDividends {
     }
   }
 
+  /**
+   * @notice Returns the amount of dividend available for withdrawal for a specific address
+   * @param payee The address to check the dividend balance for
+   * @return The amount of ETH available for withdrawal
+   */
   function getWithdrawableDividend(address payee) external view override returns (uint256) {
     return dividends[payee];
   }
 
+  /**
+   * @notice Withdraws accumulated dividends to a destination address
+   * @param dest The address to receive the dividend payout
+   */
   function withdrawDividend(address payable dest) external override {
     uint256 amount = dividends[msg.sender];
     require(amount > 0, "No dividend to withdraw");
