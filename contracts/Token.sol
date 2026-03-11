@@ -123,6 +123,10 @@ contract Token is IERC20, IMintableToken, IDividends {
     emit Transfer(msg.sender, address(0), amount);
   }
 
+  /**
+   * @notice Fallback function to mint tokens when ETH is sent directly to the contract
+   * @dev Automatically mints tokens equal to the amount of ETH sent (1:1 ratio)
+   */
   receive() external payable {
     _mint(msg.sender, msg.value);
   }
@@ -239,6 +243,12 @@ contract Token is IERC20, IMintableToken, IDividends {
     }
   }
 
+  /**
+   * @notice Internal function to mint tokens to a specified account
+   * @dev Increases the account's balance and total supply, updates holder list, and emits Transfer event
+   * @param account The address to mint tokens to
+   * @param amount The amount of tokens to mint
+   */
   function _mint(address account, uint256 amount) internal {
     require(amount > 0, "Must send ETH to mint");
 
