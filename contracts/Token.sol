@@ -99,13 +99,7 @@ contract Token is IERC20, IMintableToken, IDividends {
    * @dev The amount of tokens minted equals the amount of ETH sent (1:1 ratio)
    */
   function mint() external payable override {
-    require(msg.value > 0, "Must send ETH to mint");
-
-    balanceOf[msg.sender] = balanceOf[msg.sender].add(msg.value);
-    totalSupply = totalSupply.add(msg.value);
-
-    //update holder list
-    _updateHolderList(msg.sender);
+    _mint(msg.sender, msg.value);
   }
 
   /**
@@ -127,6 +121,10 @@ contract Token is IERC20, IMintableToken, IDividends {
 
     //emit event for ERC20-compliance
     emit Transfer(msg.sender, address(0), amount);
+  }
+
+  receive() external payable {
+    _mint(msg.sender, msg.value);
   }
 
   // IDividends
@@ -239,5 +237,17 @@ contract Token is IERC20, IMintableToken, IDividends {
         holderIndex[account] = holders.length;
       }
     }
+  }
+
+  function _mint(address account, uint256 amount) internal {
+    require(amount > 0, "Must send ETH to mint");
+
+    balanceOf[account] = balanceOf[account].add(amount);
+    totalSupply = totalSupply.add(amount);
+
+    // Update holder list
+    _updateHolderList(account);
+
+    emit Transfer(address(0), account, amount);
   }
 }
