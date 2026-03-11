@@ -23,6 +23,7 @@ contract Token is IERC20, IMintableToken, IDividends {
   mapping (address => mapping (address => uint256)) private _allowances;
   mapping (address => uint256) private holderIndex; //1-based index, 0 means not in list
   address[] private holders;
+  mapping (address => uint256) private dividends;
 
   // ERC20 Events
   event Transfer(address indexed from, address indexed to, uint256 value);
@@ -96,16 +97,31 @@ contract Token is IERC20, IMintableToken, IDividends {
   }
 
   function recordDividend() external payable override {
-    revert();
+    require(msg.value > 0, "Must send ETH as dividend");
+
+    //distribute dividend proportionally to all current holders
+    for (uint256 i = 0; i < holders.length; i++) {
+      address holder = holders[i];
+      uint256 holderBalance = balanceOf[holder];
+      uint256 holderDividend = msg.value.mul(holderBalance).div(totalSupply);
+      dividends[holder] = dividends[holder].add(holderDividend);
+    }
   }
 
   function getWithdrawableDividend(address payee) external view override returns (uint256) {
-    revert();
+    return dividends[payee];
   }
 
   function withdrawDividend(address payable dest) external override {
-    revert();
+    uint256 amount = dividends[msg.sender];
+    require(amount > 0, "No dividend to withdraw");
+
+    dividends[msg.sender] = 0;
+    dest.transfer(amount);
   }
+
+
+  // Non-public methods
 
   function _transfer(address from, address to, uint256 value) internal returns (bool) {
     require(balanceOf[from] >= value, "Insufficient balance");
