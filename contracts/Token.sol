@@ -31,7 +31,8 @@ contract Token is IERC20, IMintableToken, IDividends {
   }
 
   function transfer(address to, uint256 value) external override returns (bool) {
-    revert();
+    //call private transfer function 
+    return _transfer(msg.sender, to, value);
   }
 
   function approve(address spender, uint256 value) external override returns (bool) {
@@ -41,17 +42,30 @@ contract Token is IERC20, IMintableToken, IDividends {
   }
 
   function transferFrom(address from, address to, uint256 value) external override returns (bool) {
-    revert();
+    require(_allowances[from][msg.sender] >= value, "Insufficient allowance");
+    _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(value);
+    _transfer(from, to, value);
+    return true;
   }
 
   // IMintableToken
 
   function mint() external payable override {
-    revert();
+    require(msg.value > 0, "Must send ETH to mint");
+
+    balanceOf[msg.sender] = balanceOf[msg.sender].add(msg.value);
+    totalSupply = totalSupply.add(msg.value);
   }
 
   function burn(address payable dest) external override {
-    revert();
+    uint256 amount = balanceOf[msg.sender];
+    require(amount > 0, "No tokens to burn");
+
+    balanceOf[msg.sender] = 0;
+    totalSupply = totalSupply.sub(amount);
+
+    // Transfer ETH to destination
+    dest.transfer(amount);
   }
 
   // IDividends
@@ -74,5 +88,14 @@ contract Token is IERC20, IMintableToken, IDividends {
 
   function withdrawDividend(address payable dest) external override {
     revert();
+  }
+
+  function _transfer(address from, address to, uint256 value) internal returns (bool) {
+    require(balanceOf[from] >= value, "Insufficient balance");
+
+    balanceOf[from] = balanceOf[from].sub(value);
+    balanceOf[to] = balanceOf[to].add(value);
+
+    return true;
   }
 }
