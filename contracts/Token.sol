@@ -24,6 +24,10 @@ contract Token is IERC20, IMintableToken, IDividends {
   mapping (address => uint256) private holderIndex; //1-based index, 0 means not in list
   address[] private holders;
 
+  // ERC20 Events
+  event Transfer(address indexed from, address indexed to, uint256 value);
+  event Approval(address indexed owner, address indexed spender, uint256 value);
+
 
   // IERC20
 
@@ -40,6 +44,7 @@ contract Token is IERC20, IMintableToken, IDividends {
   function approve(address spender, uint256 value) external override returns (bool) {
     //approve by adding to list of known allowances
     _allowances[msg.sender][spender] = value;
+    emit Approval(msg.sender, spender, value);
     return true;
   }
 
@@ -74,6 +79,9 @@ contract Token is IERC20, IMintableToken, IDividends {
 
     //transfer ETH to destination
     dest.transfer(amount);
+
+    //emit event for ERC20-compliance
+    emit Transfer(msg.sender, address(0), amount);
   }
 
   // IDividends
@@ -109,6 +117,8 @@ contract Token is IERC20, IMintableToken, IDividends {
     _updateHolderList(from);
     _updateHolderList(to);
 
+    emit Transfer(from, to, value);
+
     return true;
   }
 
@@ -116,9 +126,9 @@ contract Token is IERC20, IMintableToken, IDividends {
     uint256 currentIndex = holderIndex[account];
 
     if (balanceOf[account] == 0) {
-      // Remove from holder list if balance is zero
+      //remove from holder list if balance is zero
       if (currentIndex > 0) {
-        // Move last element to the position of element to delete
+        //move last element to the position of element to delete
         uint256 lastIndex = holders.length;
         if (currentIndex != lastIndex) {
           address lastHolder = holders[lastIndex - 1];
@@ -129,7 +139,7 @@ contract Token is IERC20, IMintableToken, IDividends {
         holderIndex[account] = 0;
       }
     } else {
-      // Add to holder list if not already there
+      //add to holder list if not already there
       if (currentIndex == 0) {
         holders.push(account);
         holderIndex[account] = holders.length;
